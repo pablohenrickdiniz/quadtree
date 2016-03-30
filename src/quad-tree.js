@@ -32,6 +32,7 @@
         self.level = isNaN(level) ? 0:level;
         self.nodes = [];
         self.objects = [];
+        self.object_groups = [];
         self.qtd = 0;
         self.parent = parent === undefined?null:parent;
     };
@@ -41,6 +42,7 @@
     QuadTree.prototype.clear = function () {
         var self = this;
         self.objects = [];
+        self.object_groups = [];
         self.qtd = 0;
         var i;
         for(i = 0; i < 4;i++){
@@ -58,9 +60,24 @@
             QuadTree.ID++;
         }
 
-        if(bounds._group === undefined){
-            bounds._group = 1;
+        var groups = bounds.groups;
+        var newGroups = [];
+        if(groups === undefined){
+            newGroups = [true];
         }
+        else{
+            groups.forEach(function(group){
+                newGroups[group] = true;
+            });
+        }
+
+        bounds._groups = newGroups;
+        bounds._groups.forEach(function(active,name){
+            if(self.object_groups[name] === undefined){
+                self.object_groups[name] = [];
+            }
+            self.object_groups[name][bounds._id] = bounds;
+        });
 
         self.objects[bounds._id] = bounds;
         self.qtd++;
@@ -161,6 +178,9 @@
             var size2 =  parents.length;
             for(var j = 0; j < size2;j++){
                 delete parents[j].objects[bounds._id];
+                bounds._groups.forEach(function(active,name){
+                    delete parents[j].object_groups[name][bounds._id];
+                });
                 parents[j].qtd--;
             }
             bounds._parents[i] = [];
@@ -177,6 +197,9 @@
                     var size2 = parents.length;
                     for(var j = 0; j < size2;j++){
                         delete parents[j].objects[bounds._id];
+                        bounds._groups.forEach(function(active,name){
+                            delete parents[j].object_groups[name][bounds._id];
+                        });
                         parents[j].qtd--;
                     }
                     bounds._parents[level] = [];
@@ -194,7 +217,7 @@
         parent.insert(bounds);
     };
 
-    QuadTree.getCollisions = function(bounds){
+    QuadTree.getCollisions = function(bounds,group){
         var pos = bounds._parents.length-1;
         var colisions = [];
         if(pos !== undefined){
@@ -203,22 +226,37 @@
             var found = [];
 
             for(var  i = 0; i < size;i++){
-                parents[i].objects.forEach(function(object,id){
-                    if(id !== bounds._id && object._group === bounds._group){
-                        if(found[object._id] === undefined){
-                            if(overlap(object,bounds)){
-                                found[object._id] = true;
-                                colisions.push(object);
-                            }
+                if(group === undefined){
+                    parents[i].objects.forEach(function(object,id){
+                        if(id !== bounds._id && compare_groups(object._groups, bounds._groups) && found[object._id] === undefined && overlap(object,bounds)){
+                            found[object._id] = true;
+                            colisions.push(object);
                         }
-                    }
-                });
+                    });
+                }
+                else if(parents[i].object_groups[group] !== undefined){
+                    parents[i].object_groups[group].forEach(function(object,id){
+                        if(id !== bounds._id && found[object._id] === undefined && overlap(object,bounds)){
+                            found[object._id] = true;
+                            colisions.push(object);
+                        }
+                    });
+                }
             }
         }
         return colisions;
     };
 
-
+    function compare_groups(groupsA,groupsB){
+        var same_group = false;
+        groupsA.forEach(function(active,name){
+            if(groupsB[name] !== undefined && groupsB[name]){
+                same_group = true;
+                return false;
+            }
+        });
+        return same_group;
+    }
 
     window.QuadTree = QuadTree;
 })(window);
