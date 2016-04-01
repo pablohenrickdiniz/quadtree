@@ -171,7 +171,7 @@
             var size2 =  parents.length;
             for(var j = 0; j < size2;j++){
                 delete parents[j].objects[bounds._id];
-                var size = bounds.groups;
+                var size = bounds.groups.length;
                 for(var k = 0; k < size;k++){
                     delete parents[j].object_groups[bounds.groups[k]][bounds._id];
                 }
@@ -191,7 +191,7 @@
                     var size2 = parents.length;
                     for(var j = 0; j < size2;j++){
                         delete parents[j].objects[bounds._id];
-                        var size = bounds.groups;
+                        var size = bounds.groups.length;
                         for(var k = 0; k < size;k++){
                             delete parents[j].object_groups[bounds.groups[k]][bounds._id];
                         }
@@ -210,6 +210,14 @@
         }
         parent.remove(bounds);
         parent.insert(bounds);
+    };
+
+    QuadTree.prototype.retrieve = function(bounds,group){
+        var self = this;
+        self.insert(bounds);
+        var colisions = QuadTree.getCollisions(bounds,group);
+        QuadTree.remove(bounds);
+        return colisions;
     };
 
     QuadTree.getCollisions = function(bounds,group){
