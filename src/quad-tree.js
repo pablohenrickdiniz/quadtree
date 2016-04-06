@@ -1,4 +1,8 @@
 (function(window){
+    /*
+        overlap(Object a, Object b):Boolean
+        Verifica se dois retângulos a e b estão sobrepostos
+     */
     var overlap = function(a,b){
         if((a.x + a.width) <= b.x){
             return false;
@@ -15,11 +19,18 @@
         return true;
     };
 
+    /*
+        full_inside(Object a, Object b):Boolean
+        Verifica se o retângulo a está completamente contido em b
+     */
     var full_inside = function(a,b){
         return a.x >= b.x && a.y >= b.y && (a.x+a.width) <= (b.x+b.width) && (a.y+a.height) <= (b.y+b.height);
     };
 
-
+    /*
+        QuadTree(Object bounds, int|undefinex max_objects, int|undefined max_levels, int|undefined level,QuadTree|undefined parent):void
+        Instancia uma nova árvore ou um novo nó de árvore
+     */
     var QuadTree = function(bounds, max_objects, max_levels,level,parent) {
         var self = this;
         self.bounds = bounds;
@@ -38,7 +49,10 @@
     };
 
     QuadTree.ID = 0;
-
+    /*
+        clear():void
+        Limpa todos os nós
+     */
     QuadTree.prototype.clear = function () {
         var self = this;
         self.objects = [];
@@ -52,6 +66,10 @@
         }
     };
 
+    /*
+        insert(Object bounds):void
+        Insere um retângulo na quadtree
+     */
     QuadTree.prototype.insert = function (bounds) {
         var self = this;
 
@@ -115,12 +133,19 @@
         }
     };
 
+    /*
+        isLeaft():Boolean
+        Verifica se o nó e uma folha
+     */
     QuadTree.prototype.isLeaf = function(){
         var self = this;
         return self.qtd <= self.max_objects;
     };
 
-
+    /*
+        split():void
+        Divide um nó em quatro sub-nós
+     */
     QuadTree.prototype.split = function () {
         var self = this;
         var level = self.level + 1;
@@ -162,6 +187,11 @@
         }, self.max_objects,self.max_levels,level,self);
     };
 
+    /*
+        remove(Object bounds):void
+        Remove um retângulo a partir do nó atual
+        para os nós filhos
+     */
     QuadTree.prototype.remove = function(bounds){
         var self = this;
         var level = self.level;
@@ -181,7 +211,11 @@
         }
     };
 
-
+    /*
+        remove(Object bounds):void
+        Remove todas as referências do objeto
+        da árvore
+     */
     QuadTree.remove = function (bounds) {
         if(bounds !== undefined){
             if(bounds._parents !== undefined){
@@ -203,6 +237,11 @@
         }
     };
 
+    /*
+        reInsert(Object bounds):void
+        Atualiza os nós da árvore de
+        acordo com a nova posição do objeto
+     */
     QuadTree.reInsert = function(bounds){
         var parent = bounds._full_inside;
         while(parent.parent !== null && parent.parent !== undefined){
@@ -212,6 +251,12 @@
         parent.insert(bounds);
     };
 
+    /*
+        retrieve(Object bounds, String group):Array
+        Obtém todos o retângulos que estão em sobreposição
+        com a área bounds(que não está inserido na árvore)
+        e que estão no grupo group
+     */
     QuadTree.prototype.retrieve = function(bounds,group){
         var self = this;
         self.insert(bounds);
@@ -220,6 +265,12 @@
         return colisions;
     };
 
+    /*
+        getCollisions(Object bounds, String group):Array
+        Obtém todos o retângulos que estão em sobreposição
+        com o objeto bounds(que já esta inserido na árvore)
+        e que estão no grupo group
+     */
     QuadTree.getCollisions = function(bounds,group){
         var pos = bounds._parents.length-1;
         var colisions = [];
@@ -250,6 +301,11 @@
         return colisions;
     };
 
+    /*
+        compare_groups(Array groupsA, Array groupsB):Bolean
+        Verifica se ao menos um dos grupos de um objeto
+        está contindo no conjunto de grupos de outro objeto
+     */
     function compare_groups(groupsA,groupsB){
         var sizeA = groupsA.length;
         var sizeB = groupsB.length;
