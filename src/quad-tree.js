@@ -1,4 +1,4 @@
-(function(window){
+(function(w){
     /*
         overlap(Object a, Object b):Boolean
         Verifica se dois retângulos a e b estão sobrepostos
@@ -320,6 +320,6 @@
         return false;
     }
 
-    window.QuadTree = QuadTree;
+    w.QuadTree = QuadTree;
 })(window);
 
