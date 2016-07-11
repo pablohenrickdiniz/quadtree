@@ -244,11 +244,13 @@
      */
     QuadTree.reInsert = function(bounds){
         var parent = bounds._full_inside;
-        while(parent.parent !== null && parent.parent !== undefined){
-            parent = parent.parent;
+        if(parent != undefined){
+            while(parent.parent !== null && parent.parent !== undefined){
+                parent = parent.parent;
+            }
+            parent.remove(bounds);
+            parent.insert(bounds);
         }
-        parent.remove(bounds);
-        parent.insert(bounds);
     };
 
     /*
