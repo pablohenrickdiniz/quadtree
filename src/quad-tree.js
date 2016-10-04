@@ -189,19 +189,21 @@
      * @param group
      */
     QuadTree.removeGroup = function(bounds,group){
-        var index = bounds.groups.indexOf(group);
-        if(index != -1){
-            bounds.groups.splice(index,1);
+        if(bounds.groups){
+            var index = bounds.groups.indexOf(group);
+            if(index != -1){
+                bounds.groups.splice(index,1);
+            }
         }
-        var self = this;
-        var level = self.level;
-        var size1 =  bounds._parents.length;
-        for(var i = level; i < size1;i++){
-            var parents = bounds._parents[i];
-            var size2 =  parents.length;
-            for(var j = 0; j < size2;j++){
-                if(parents[j].object_groups[group] != undefined){
-                    delete parents[j].object_groups[group][bounds._id];
+        if(bounds._parents){
+            var size1 =  bounds._parents.length;
+            for(var i = 0; i < size1;i++){
+                var parents = bounds._parents[i];
+                var size2 =  parents.length;
+                for(var j = 0; j < size2;j++){
+                    if(parents[j].object_groups[group] != undefined){
+                        delete parents[j].object_groups[group][bounds._id];
+                    }
                 }
             }
         }
@@ -217,17 +219,17 @@
         if(bounds.groups.indexOf(group) == -1){
             bounds.groups.push(group);
         }
-        var self = this;
-        var level = self.level;
-        var size1 =  bounds._parents.length;
-        for(var i = level; i < size1;i++){
-            var parents = bounds._parents[i];
-            var size2 =  parents.length;
-            for(var j = 0; j < size2;j++){
-                if(parents[j].object_groups[group] == undefined){
-                    parents[j].object_groups[group] = [];
+        if(bounds._parents){
+            var size1 =  bounds._parents.length;
+            for(var i = 0; i < size1;i++){
+                var parents = bounds._parents[i];
+                var size2 =  parents.length;
+                for(var j = 0; j < size2;j++){
+                    if(parents[j].object_groups[group] == undefined){
+                        parents[j].object_groups[group] = [];
+                    }
+                    parents[j].object_groups[group][bounds._id] = bounds;
                 }
-                parents[j].object_groups[group][bounds._id] = bounds;
             }
         }
     };
