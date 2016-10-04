@@ -188,7 +188,7 @@
      * @param bounds
      * @param group
      */
-    QuadTree.prototype.removeGroup = function(bounds,group){
+    QuadTree.removeGroup = function(bounds,group){
         var index = bounds.groups.indexOf(group);
         if(index != -1){
             bounds.groups.splice(index,1);
@@ -213,7 +213,7 @@
      * @param bounds
      * @param group
      */
-    QuadTree.prototype.addGroup = function(bounds,group){
+    QuadTree.addGroup = function(bounds,group){
         if(bounds.groups.indexOf(group) == -1){
             bounds.groups.push(group);
         }
