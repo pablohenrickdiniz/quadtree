@@ -211,6 +211,31 @@
     /**
      *
      * @param bounds
+     * @param group
+     */
+    QuadTree.prototype.addGroup = function(bounds,group){
+        if(bounds.groups.indexOf(group) == -1){
+            bounds.groups.push(group);
+        }
+        var self = this;
+        var level = self.level;
+        var size1 =  bounds._parents.length;
+        for(var i = level; i < size1;i++){
+            var parents = bounds._parents[i];
+            var size2 =  parents.length;
+            for(var j = 0; j < size2;j++){
+                if(parents[j].object_groups[group] == undefined){
+                    parents[j].object_groups[group] = [];
+                }
+                parents[j].object_groups[group][bounds._id] = bounds;
+            }
+        }
+    };
+
+
+    /**
+     *
+     * @param bounds
      */
     QuadTree.remove = function (bounds) {
         if(bounds !== undefined){
