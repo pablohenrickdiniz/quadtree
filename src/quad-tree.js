@@ -26,9 +26,7 @@
     };
 
     QuadTree.ID = 0;
-    /**
-     *
-     */
+
     QuadTree.prototype.clear = function () {
         var self = this;
         self.objects = [];
@@ -49,8 +47,8 @@
     QuadTree.prototype.insert = function (bounds) {
         var self = this;
 
-        if(bounds._id === undefined){
-            bounds._id = QuadTree.ID;
+        if(bounds.id === undefined){
+            bounds.id = QuadTree.ID;
             QuadTree.ID++;
         }
 
@@ -59,32 +57,35 @@
             bounds.groups = ['default'];
         }
 
-        bounds.groups.forEach(function(name){
-            if(self.object_groups[name] === undefined){
-                self.object_groups[name] = [];
-            }
-            self.object_groups[name][bounds._id] = bounds;
-        });
+        var length = bounds.groups.length;
+        var i;
 
-        self.objects[bounds._id] = bounds;
+        for(i =0; i < length;i++){
+            var group = bounds.groups[i];
+            if(self.object_groups[group] === undefined){
+                self.object_groups[group] = [];
+            }
+            self.object_groups[group][bounds.id] = bounds;
+        }
+
+        self.objects[bounds.id] = bounds;
         self.qtd++;
 
-        if(bounds._full_inside === undefined){
+        if(bounds.full_inside === undefined){
             if(!full_inside(bounds,self.bounds) || self.qtd <= self.max_objects){
-                bounds._full_inside = self.parent === null?self:self.parent;
+                bounds.full_inside = self.parent === null?self:self.parent;
             }
 
         }
 
-        if(bounds._parents === undefined){
-            bounds._parents = [];
+        if(bounds.parents === undefined){
+            bounds.parents = [];
         }
-        if(bounds._parents[self.level] === undefined){
-            bounds._parents[self.level] = [];
+        if(bounds.parents[self.level] === undefined){
+            bounds.parents[self.level] = [];
         }
-        bounds._parents[self.level].push(self);
+        bounds.parents[self.level].push(self);
 
-        //  console.log('size:',size,'max_objects:',self.max_objects,'max level:',self.max_levels,'level:',self.level);
         if(self.qtd > self.max_objects && self.level < self.max_levels){
             if(self.nodes.length === 0){
                 self.split();
@@ -100,7 +101,7 @@
                 });
             }
             else{
-                for(var i = 0; i < 4;i++){
+                for(i = 0; i < 4;i++){
                     if(overlap(bounds,self.nodes[i].bounds)){
                         self.nodes[i].insert(bounds);
                     }
@@ -167,19 +168,40 @@
     QuadTree.prototype.remove = function(bounds){
         var self = this;
         var level = self.level;
-        var size1 =  bounds._parents.length;
+        var size1 =  bounds.parents.length;
         for(var i = level; i < size1;i++){
-            var parents = bounds._parents[i];
+            var parents = bounds.parents[i];
             var size2 =  parents.length;
             for(var j = 0; j < size2;j++){
-                delete parents[j].objects[bounds._id];
+                delete parents[j].objects[bounds.id];
                 var size = bounds.groups.length;
                 for(var k = 0; k < size;k++){
-                    delete parents[j].object_groups[bounds.groups[k]][bounds._id];
+                    delete parents[j].object_groups[bounds.groups[k]][bounds.id];
                 }
                 parents[j].qtd--;
             }
-            bounds._parents[i] = [];
+            bounds.parents[i] = [];
+        }
+    };
+
+    /**
+     *
+     * @param group
+     */
+    QuadTree.prototype.removeGroup = function(group){
+        var self = this;
+        if(self.object_groups[group] != undefined){
+            delete self.object_groups[group];
+        }
+
+        self.objects.forEach(function(obj,id){
+            if(obj.groups.indexOf(group) != -1){
+                delete self.objects[id];
+            }
+        });
+        var length = self.nodes.length;
+        for(var i =0; i < length;i++){
+            self.nodes[i].removeGroup(group);
         }
     };
 
@@ -195,14 +217,14 @@
                 bounds.groups.splice(index,1);
             }
         }
-        if(bounds._parents){
-            var size1 =  bounds._parents.length;
+        if(bounds.parents){
+            var size1 =  bounds.parents.length;
             for(var i = 0; i < size1;i++){
-                var parents = bounds._parents[i];
+                var parents = bounds.parents[i];
                 var size2 =  parents.length;
                 for(var j = 0; j < size2;j++){
                     if(parents[j].object_groups[group] != undefined){
-                        delete parents[j].object_groups[group][bounds._id];
+                        delete parents[j].object_groups[group][bounds.id];
                     }
                 }
             }
@@ -219,16 +241,16 @@
         if(bounds.groups.indexOf(group) == -1){
             bounds.groups.push(group);
         }
-        if(bounds._parents){
-            var size1 =  bounds._parents.length;
+        if(bounds.parents){
+            var size1 =  bounds.parents.length;
             for(var i = 0; i < size1;i++){
-                var parents = bounds._parents[i];
+                var parents = bounds.parents[i];
                 var size2 =  parents.length;
                 for(var j = 0; j < size2;j++){
                     if(parents[j].object_groups[group] == undefined){
                         parents[j].object_groups[group] = [];
                     }
-                    parents[j].object_groups[group][bounds._id] = bounds;
+                    parents[j].object_groups[group][bounds.id] = bounds;
                 }
             }
         }
@@ -241,20 +263,20 @@
      */
     QuadTree.remove = function (bounds) {
         if(bounds !== undefined){
-            if(bounds._parents !== undefined){
-                var size1 = bounds._parents.length;
+            if(bounds.parents !== undefined){
+                var size1 = bounds.parents.length;
                 for(var level = 0; level < size1;level++){
-                    var parents = bounds._parents[level];
+                    var parents = bounds.parents[level];
                     var size2 = parents.length;
                     for(var j = 0; j < size2;j++){
-                        delete parents[j].objects[bounds._id];
+                        delete parents[j].objects[bounds.id];
                         var size = bounds.groups.length;
                         for(var k = 0; k < size;k++){
-                            delete parents[j].object_groups[bounds.groups[k]][bounds._id];
+                            delete parents[j].object_groups[bounds.groups[k]][bounds.id];
                         }
                         parents[j].qtd--;
                     }
-                    bounds._parents[level] = [];
+                    bounds.parents[level] = [];
                 }
             }
         }
@@ -265,7 +287,7 @@
      * @param bounds
      */
     QuadTree.reInsert = function(bounds){
-        var parent = bounds._full_inside;
+        var parent = bounds.full_inside;
         if(parent != undefined){
             while(parent.parent !== null && parent.parent !== undefined){
                 parent = parent.parent;
@@ -296,26 +318,26 @@
      * @returns {Array}
      */
     QuadTree.getCollisions = function(bounds,group){
-        var pos = bounds._parents.length-1;
+        var pos = bounds.parents.length-1;
         var colisions = [];
         if(pos !== undefined){
-            var parents = bounds._parents[pos];
+            var parents = bounds.parents[pos];
             var size = parents.length;
             var found = [];
 
             for(var  i = 0; i < size;i++){
                 if(group === undefined){
                     parents[i].objects.forEach(function(object,id){
-                        if(id !== bounds._id && compare_groups(object.groups, bounds.groups) && found[object._id] === undefined && overlap(object,bounds)){
-                            found[object._id] = true;
+                        if(id !== bounds.id && compare_groups(object.groups, bounds.groups) && found[object.id] === undefined && overlap(object,bounds)){
+                            found[object.id] = true;
                             colisions.push(object);
                         }
                     });
                 }
                 else if(parents[i].object_groups[group] !== undefined){
                     parents[i].object_groups[group].forEach(function(object,id){
-                        if(id !== bounds._id && found[object._id] === undefined && overlap(object,bounds)){
-                            found[object._id] = true;
+                        if(id !== bounds.id && found[object.id] === undefined && overlap(object,bounds)){
+                            found[object.id] = true;
                             colisions.push(object);
                         }
                     });
