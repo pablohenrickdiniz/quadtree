@@ -1,4 +1,5 @@
 (function(w){
+    var ID = 0;
     /**
      *
      * @param bounds
@@ -20,23 +21,32 @@
         self.level = isNaN(level) ? 0:level;
         self.nodes = [];
         self.objects = [];
-        self.object_groups = [];
+        self.groups = [];
         self.qtd = 0;
         self.parent = parent === undefined?null:parent;
     };
 
-    QuadTree.ID = 0;
 
     QuadTree.prototype.clear = function () {
         var self = this;
+
+        self.objects.forEach(function(obj){
+            if(obj.parents[self.level]){
+                var index = obj.parents[self.level].indexOf(self);
+                if(index != -1){
+                    obj.parents[self.level].splice(index,1);
+                }
+            }
+        });
+
         self.objects = [];
-        self.object_groups = [];
+        self.groups = [];
         self.qtd = 0;
         var i;
-        for(i = 0; i < 4;i++){
-            if(self.nodes[i] !== undefined && self.nodes[i].qtd > 0){
-                self.nodes[i].clear();
-            }
+        var length = self.nodes.length;
+
+        for(i = 0; i < length;i++){
+            self.nodes[i].clear();
         }
     };
 
@@ -48,10 +58,9 @@
         var self = this;
 
         if(bounds.id === undefined){
-            bounds.id = QuadTree.ID;
-            QuadTree.ID++;
+            bounds.id = ID;
+            ID++;
         }
-
 
         if(bounds.groups === undefined){
             bounds.groups = ['default'];
@@ -62,49 +71,34 @@
 
         for(i =0; i < length;i++){
             var group = bounds.groups[i];
-            if(self.object_groups[group] === undefined){
-                self.object_groups[group] = [];
+            if(self.groups[group] === undefined){
+                self.groups[group] = [];
             }
-            self.object_groups[group][bounds.id] = bounds;
+            self.groups[group][bounds.id] = bounds;
         }
 
         self.objects[bounds.id] = bounds;
-        self.qtd++;
 
-        if(bounds.full_inside === undefined){
-            if(!full_inside(bounds,self.bounds) || self.qtd <= self.max_objects){
-                bounds.full_inside = self.parent === null?self:self.parent;
-            }
-
-        }
-
-        if(bounds.parents === undefined){
+        if(bounds.parents == undefined){
             bounds.parents = [];
         }
-        if(bounds.parents[self.level] === undefined){
+        if(bounds.parents[self.level] == undefined){
             bounds.parents[self.level] = [];
         }
-        bounds.parents[self.level].push(self);
+        var index = bounds.parents[self.level].indexOf(self);
+        if(index == -1){
+            bounds.parents[self.level].push(self);
+        }
 
-        if(self.qtd > self.max_objects && self.level < self.max_levels){
-            if(self.nodes.length === 0){
+        self.qtd++;
+
+        if(self.qtd > self.max_objects && self.level < self.max_levels) {
+            if(self.nodes.length == 0){
                 self.split();
             }
-
-            if(self.qtd === self.max_objects + 1){
-                self.objects.forEach(function(object){
-                    for(var j = 0; j < 4;j++){
-                        if(overlap(object,self.nodes[j].bounds)){
-                            self.nodes[j].insert(object);
-                        }
-                    }
-                });
-            }
-            else{
-                for(i = 0; i < 4;i++){
-                    if(overlap(bounds,self.nodes[i].bounds)){
-                        self.nodes[i].insert(bounds);
-                    }
+            for (i = 0; i < 4; i++) {
+                if (overlap(bounds, self.nodes[i].bounds)) {
+                    self.nodes[i].insert(bounds);
                 }
             }
         }
@@ -159,6 +153,14 @@
             width:width,
             height:height
         }, self.max_objects,self.max_levels,level,self);
+
+        self.objects.forEach(function (object) {
+            for (var j = 0; j < 4; j++) {
+                if (overlap(object, self.nodes[j].bounds)) {
+                    self.nodes[j].insert(object);
+                }
+            }
+        });
     };
 
     /**
@@ -166,22 +168,7 @@
      * @param bounds
      */
     QuadTree.prototype.remove = function(bounds){
-        var self = this;
-        var level = self.level;
-        var size1 =  bounds.parents.length;
-        for(var i = level; i < size1;i++){
-            var parents = bounds.parents[i];
-            var size2 =  parents.length;
-            for(var j = 0; j < size2;j++){
-                delete parents[j].objects[bounds.id];
-                var size = bounds.groups.length;
-                for(var k = 0; k < size;k++){
-                    delete parents[j].object_groups[bounds.groups[k]][bounds.id];
-                }
-                parents[j].qtd--;
-            }
-            bounds.parents[i] = [];
-        }
+        QuadTree.remove(bounds);
     };
 
     /**
@@ -190,8 +177,8 @@
      */
     QuadTree.prototype.removeGroup = function(group){
         var self = this;
-        if(self.object_groups[group] != undefined){
-            delete self.object_groups[group];
+        if(self.groups[group] != undefined){
+            delete self.groups[group];
         }
 
         self.objects.forEach(function(obj,id){
@@ -211,26 +198,30 @@
      * @param group
      */
     QuadTree.removeGroup = function(bounds,group){
-        if(bounds.groups){
-            var index = bounds.groups.indexOf(group);
-            if(index != -1){
-                bounds.groups.splice(index,1);
-            }
+        var index = bounds.groups.indexOf(group);
+        if(index != -1){
+            bounds.groups.splice(index,1);
         }
-        if(bounds.parents){
-            var size1 =  bounds.parents.length;
-            for(var i = 0; i < size1;i++){
-                var parents = bounds.parents[i];
-                var size2 =  parents.length;
-                for(var j = 0; j < size2;j++){
-                    if(parents[j].object_groups[group] != undefined){
-                        delete parents[j].object_groups[group][bounds.id];
-                    }
+
+        var length1 = bounds.parents;
+        var length2;
+        var i;
+        var j;
+        var parents;
+        var parent;
+
+
+        for(i = 0; i < length1;i++){
+            parents = bounds.parents[i];
+            length2 = parents.length;
+            for(j = 0;j < length2;j++){
+                parent = parents[j];
+                if(parent.groups[group] != undefined){
+                    delete parent.groups[group][bounds.id];
                 }
             }
         }
     };
-
 
     /**
      *
@@ -241,17 +232,23 @@
         if(bounds.groups.indexOf(group) == -1){
             bounds.groups.push(group);
         }
-        if(bounds.parents){
-            var size1 =  bounds.parents.length;
-            for(var i = 0; i < size1;i++){
-                var parents = bounds.parents[i];
-                var size2 =  parents.length;
-                for(var j = 0; j < size2;j++){
-                    if(parents[j].object_groups[group] == undefined){
-                        parents[j].object_groups[group] = [];
-                    }
-                    parents[j].object_groups[group][bounds.id] = bounds;
+
+        var length1 =  bounds.parents.length;
+        var length2;
+        var i;
+        var j;
+        var parents;
+        var parent;
+
+        for(i = 0; i < length1;i++){
+            parents = bounds.parents[i];
+            length2 = parents.length;
+            for(j = 0; j < length2;j++){
+                parent = parents[j];
+                if(parent.groups[group] == undefined){
+                    parent.groups[group] = [];
                 }
+                parent.groups[group][bounds.id] = bounds;
             }
         }
     };
@@ -262,24 +259,36 @@
      * @param bounds
      */
     QuadTree.remove = function (bounds) {
-        if(bounds !== undefined){
-            if(bounds.parents !== undefined){
-                var size1 = bounds.parents.length;
-                for(var level = 0; level < size1;level++){
-                    var parents = bounds.parents[level];
-                    var size2 = parents.length;
-                    for(var j = 0; j < size2;j++){
-                        delete parents[j].objects[bounds.id];
-                        var size = bounds.groups.length;
-                        for(var k = 0; k < size;k++){
-                            delete parents[j].object_groups[bounds.groups[k]][bounds.id];
-                        }
-                        parents[j].qtd--;
+        var length1 =  bounds.parents.length;
+        var length2;
+        var length3;
+        var parents;
+        var i;
+        var j;
+        var parent;
+        var k;
+        var group;
+
+        for(i =0; i < length1;i++){
+            parents = bounds.parents[i];
+            length2 = parents.length;
+            for(j = 0; j < length2;j++){
+                parent = parents[j];
+                delete parent.objects[bounds.id];
+                length3 = bounds.groups.length;
+                for (k = 0; k < length3; k++) {
+                    group = bounds.groups[k];
+                    if(parent.groups[group] != undefined){
+                        delete parent.groups[group][bounds.id];
                     }
-                    bounds.parents[level] = [];
+                }
+                parent.qtd--;
+                if(parent.qtd <= parent.max_objects && parent.nodes.length > 0){
+                    parent.nodes = [];
                 }
             }
         }
+        bounds.parents = [];
     };
 
     /**
@@ -287,9 +296,9 @@
      * @param bounds
      */
     QuadTree.reInsert = function(bounds){
-        var parent = bounds.full_inside;
-        if(parent != undefined){
-            while(parent.parent !== null && parent.parent !== undefined){
+        if(bounds.parents.length > 0){
+            var parent = bounds.parents[0][0];
+            while(parent.parent instanceof QuadTree){
                 parent = parent.parent;
             }
             parent.remove(bounds);
@@ -307,7 +316,7 @@
         var self = this;
         self.insert(bounds);
         var colisions = QuadTree.getCollisions(bounds,group);
-        QuadTree.remove(bounds);
+        self.remove(bounds);
         return colisions;
     };
 
@@ -334,8 +343,8 @@
                         }
                     });
                 }
-                else if(parents[i].object_groups[group] !== undefined){
-                    parents[i].object_groups[group].forEach(function(object,id){
+                else if(parents[i].groups[group] !== undefined){
+                    parents[i].groups[group].forEach(function(object,id){
                         if(id !== bounds.id && found[object.id] === undefined && overlap(object,bounds)){
                             found[object.id] = true;
                             colisions.push(object);
@@ -389,15 +398,7 @@
         return true;
     }
 
-    /**
-     *
-     * @param a
-     * @param b
-     * @returns {boolean}
-     */
-    function full_inside(a,b){
-        return a.x >= b.x && a.y >= b.y && (a.x+a.width) <= (b.x+b.width) && (a.y+a.height) <= (b.y+b.height);
-    }
+
 
     w.QuadTree = QuadTree;
 })(window);
