@@ -327,32 +327,39 @@
      * @returns {Array}
      */
     QuadTree.getCollisions = function(bounds,group){
-        var pos = bounds.parents.length-1;
+        var si = bounds.parents.length-1;
+        var i;
+        var j;
         var colisions = [];
-        if(pos !== undefined){
-            var parents = bounds.parents[pos];
-            var size = parents.length;
-            var found = [];
+        var found = [];
+        var length;
+        var parent;
 
-            for(var  i = 0; i < size;i++){
-                if(group === undefined){
-                    parents[i].objects.forEach(function(object,id){
-                        if(id !== bounds.id && compare_groups(object.groups, bounds.groups) && found[object.id] === undefined && overlap(object,bounds)){
-                            found[object.id] = true;
-                            colisions.push(object);
-                        }
-                    });
-                }
-                else if(parents[i].groups[group] !== undefined){
-                    parents[i].groups[group].forEach(function(object,id){
-                        if(id !== bounds.id && found[object.id] === undefined && overlap(object,bounds)){
-                            found[object.id] = true;
-                            colisions.push(object);
-                        }
-                    });
+        for(i =  si; i >= 0;i--){
+            length = bounds.parents[i].length;
+            for(j = 0; j < length;j++){
+                parent = bounds.parents[i][j];
+                if(parent.isLeaf()){
+                    if(group === undefined){
+                        parent.objects.forEach(function(object,id){
+                            if(id !== bounds.id  && found[object.id] == undefined && overlap(object,bounds)){
+                                found[object.id] = true;
+                                colisions.push(object);
+                            }
+                        });
+                    }
+                    else if(parent.groups[group] !== undefined){
+                        parent.groups[group].forEach(function(object,id){
+                            if(id !== bounds.id && found[object.id] === undefined && overlap(object,bounds)){
+                                found[object.id] = true;
+                                colisions.push(object);
+                            }
+                        });
+                    }
                 }
             }
         }
+
         return colisions;
     };
 
